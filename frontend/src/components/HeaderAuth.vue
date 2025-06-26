@@ -1,5 +1,5 @@
 <template>
-  <header style="width: 100%; background: #222; color: #fff; padding: 1rem 0; display: flex; justify-content: space-between; align-items: center;">
+  <header style="width: 100%; background: #8B5C2A; color: #fff; padding: 1rem 0; display: flex; justify-content: space-between; align-items: center;">
     <div style="font-size: 1.5rem; font-weight: bold; margin-left: 2rem;">UniPan</div>
     <div style="margin-right: 2rem; display: flex; align-items: center;">
       <template v-if="user">
