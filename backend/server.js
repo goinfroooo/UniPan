@@ -4,12 +4,15 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
+const multer = require('multer');
 
 const app = express();
 const PORT = 3001;
 const DATA_FILE = path.join(__dirname, 'blocs.json');
 const USERS_FILE = path.join(__dirname, 'users.json');
 const JWT_SECRET = 'change_this_secret'; // À mettre en variable d'env en prod
+const upload = multer({ dest: 'uploads/' });
 
 app.use(cors());
 app.use(express.json());
@@ -46,32 +49,72 @@ function saveUsers(users) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
 }
 
+// Modèle Bloc MongoDB
+const blocSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  description: { type: String, default: '' },
+  holds: {
+    type: [
+      {
+        num: Number,
+        type: String, // 'S', 'F', 'M', 'P'
+      },
+    ],
+    required: true,
+  },
+  grade: { type: String, default: '' },
+  ratings: {
+    type: [
+      {
+        userId: String,
+        rating: Number,
+      },
+    ],
+    default: [],
+  },
+});
+const Bloc = mongoose.model('Bloc', blocSchema);
+
 // Récupérer tous les blocs
-app.get('/api/blocs', (req, res) => {
-  const blocs = loadBlocs();
-  res.json(blocs);
+app.get('/api/blocs', async (req, res) => {
+  try {
+    const blocs = await Bloc.find();
+    res.json(blocs);
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 // Récupérer un bloc par id
-app.get('/api/blocs/:id', (req, res) => {
-  const blocs = loadBlocs();
-  const bloc = blocs.find(b => b.id === req.params.id);
-  if (!bloc) return res.status(404).json({ error: 'Bloc non trouvé' });
-  res.json(bloc);
+app.get('/api/blocs/:id', async (req, res) => {
+  try {
+    const bloc = await Bloc.findById(req.params.id);
+    if (!bloc) return res.status(404).json({ error: 'Bloc non trouvé' });
+    res.json(bloc);
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
-// Créer un nouveau bloc (ajout du champ grade et ratings)
-app.post('/api/blocs', (req, res) => {
+// Créer un nouveau bloc
+app.post('/api/blocs', async (req, res) => {
   const { name, description, holds, grade } = req.body;
-  if (!name || !Array.isArray(holds)) {
+  if (!name || !Array.isArray(holds) || holds.length === 0) {
     return res.status(400).json({ error: 'Nom et prises obligatoires' });
   }
-  const blocs = loadBlocs();
-  const id = Date.now().toString();
-  const bloc = { id, name, description: description || '', holds, grade: grade || '', ratings: [] };
-  blocs.push(bloc);
-  saveBlocs(blocs);
-  res.status(201).json(bloc);
+  try {
+    // Vérification du format des prises
+    for (const h of holds) {
+      if (typeof h.num !== 'number' || !['S','F','M','P'].includes(h.type)) {
+        return res.status(400).json({ error: 'Format de prise invalide' });
+      }
+    }
+    const bloc = new Bloc({ name, description: description || '', holds, grade: grade || '', ratings: [] });
+    await bloc.save();
+    res.status(201).json(bloc);
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 function authMiddleware(req, res, next) {
@@ -89,43 +132,80 @@ function authMiddleware(req, res, next) {
 
 // Inscription (le premier utilisateur devient admin)
 app.post('/api/register', async (req, res) => {
-  const { email, password, consent } = req.body;
-  if (!email || !password || consent !== true) {
-    return res.status(400).json({ error: 'Email, mot de passe et consentement requis' });
+  const { email, password, consent, pseudo, avatar } = req.body;
+  if (!email || !password || consent !== true || !pseudo) {
+    return res.status(400).json({ error: 'Email, mot de passe, pseudo et consentement requis' });
   }
-  const users = loadUsers();
-  if (users.find(u => u.email === email)) {
-    return res.status(409).json({ error: 'Utilisateur déjà existant' });
+  try {
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(409).json({ error: 'Utilisateur déjà existant' });
+    }
+    const hash = await bcrypt.hash(password, 10);
+    const isFirst = (await User.countDocuments()) === 0;
+    const user = new User({
+      email,
+      password: hash,
+      pseudo,
+      avatar: avatar || '',
+      role: isFirst ? 'admin' : 'user',
+    });
+    await user.save();
+    res.status(201).json({ message: 'Compte créé' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
   }
-  const hash = await bcrypt.hash(password, 10);
-  const isFirst = users.length === 0;
-  const user = { id: Date.now().toString(), email, password: hash, role: isFirst ? 'admin' : 'user', favorites: [] };
-  users.push(user);
-  saveUsers(users);
-  res.status(201).json({ message: 'Compte créé' });
 });
 
-// Connexion (retourne aussi le rôle)
+// Connexion (retourne aussi le rôle, le pseudo et l'avatar)
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Email et mot de passe requis' });
   }
-  const users = loadUsers();
-  const user = users.find(u => u.email === email);
-  if (!user) return res.status(401).json({ error: 'Identifiants invalides' });
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) return res.status(401).json({ error: 'Identifiants invalides' });
-  const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-  res.json({ token, role: user.role });
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(401).json({ error: 'Identifiants invalides' });
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(401).json({ error: 'Identifiants invalides' });
+    const token = jwt.sign({ id: user._id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, role: user.role, pseudo: user.pseudo, avatar: user.avatar });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 // Infos utilisateur (authentifié)
-app.get('/api/me', authMiddleware, (req, res) => {
-  const users = loadUsers();
-  const user = users.find(u => u.id === req.user.id);
-  if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' });
-  res.json({ id: user.id, email: user.email, role: user.role, favorites: user.favorites || [] });
+app.get('/api/me', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    res.json({
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      favorites: user.favorites || [],
+      pseudo: user.pseudo || '',
+      avatar: user.avatar || '',
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Mise à jour du profil utilisateur (pseudo et avatar)
+app.patch('/api/me', authMiddleware, async (req, res) => {
+  const { pseudo, avatar } = req.body;
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    if (pseudo) user.pseudo = pseudo;
+    if (avatar !== undefined) user.avatar = avatar;
+    await user.save();
+    res.json({ message: 'Profil mis à jour', pseudo: user.pseudo, avatar: user.avatar });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 // Suppression de compte (droit à l'oubli)
@@ -148,18 +228,19 @@ app.get('/api/me/export', authMiddleware, (req, res) => {
 });
 
 // Suppression de bloc (admin uniquement)
-app.delete('/api/blocs/:id', authMiddleware, (req, res) => {
-  const users = loadUsers();
-  const user = users.find(u => u.id === req.user.id);
-  if (!user || user.role !== 'admin') {
-    return res.status(403).json({ error: 'Droits administrateur requis' });
+app.delete('/api/blocs/:id', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ error: 'Droits administrateur requis' });
+    }
+    const bloc = await Bloc.findById(req.params.id);
+    if (!bloc) return res.status(404).json({ error: 'Bloc non trouvé' });
+    await bloc.deleteOne();
+    res.json({ message: 'Bloc supprimé' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
   }
-  let blocs = loadBlocs();
-  const bloc = blocs.find(b => b.id === req.params.id);
-  if (!bloc) return res.status(404).json({ error: 'Bloc non trouvé' });
-  blocs = blocs.filter(b => b.id !== req.params.id);
-  saveBlocs(blocs);
-  res.json({ message: 'Bloc supprimé' });
 });
 
 // Favoris : ajouter un bloc aux favoris
@@ -269,6 +350,46 @@ app.delete('/api/me/ascents/:blocId', authMiddleware, (req, res) => {
   saveUsers(users);
   res.json({ ascents: user.ascents });
 });
+
+// Exposer le dossier uploads en statique
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Upload d'image de profil
+app.post('/api/upload/avatar', authMiddleware, upload.single('avatar'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Aucun fichier envoyé' });
+  }
+  // Retourner l'URL d'accès à l'image
+  const url = `/uploads/${req.file.filename}`;
+  res.json({ url });
+});
+
+// Connexion à MongoDB
+mongoose.connect('mongodb://localhost:27017/unipan', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
+
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  pseudo: { type: String, required: true },
+  avatar: { type: String, default: '' },
+  role: { type: String, default: 'user' },
+  favorites: { type: [String], default: [] },
+  ascents: {
+    type: [
+      {
+        blocId: String,
+        status: String, // 'sent' ou 'tried'
+        attempts: Number,
+      },
+    ],
+    default: [],
+  },
+});
+
+const User = mongoose.model('User', userSchema);
 
 app.listen(PORT, () => {
   console.log(`Serveur backend démarré sur http://localhost:${PORT}`);
