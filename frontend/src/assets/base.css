@@ -19,6 +19,13 @@
   --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
   --vt-c-text-dark-1: var(--vt-c-white);
   --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
+
+  --unibloc-orange: #ff9800;
+  --unibloc-dark: #181818;
+  --unibloc-grey: #f5f5f5;
+  --unibloc-border: #e0e0e0;
+  --unibloc-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  --unibloc-radius: 12px;
 }
 
 /* semantic color variables for this project */
@@ -66,21 +73,57 @@ body {
     color 0.5s,
     background-color 0.5s;
   line-height: 1.6;
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
-    sans-serif;
-  font-size: 15px;
+  font-family: 'Montserrat', 'Inter', Arial, sans-serif;
+  font-size: 16px;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--unibloc-grey);
+  color: var(--unibloc-dark);
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: 'Montserrat', 'Inter', Arial, sans-serif;
+  font-weight: bold;
+  color: var(--unibloc-dark);
+}
+
+button {
+  background: var(--unibloc-orange);
+  color: #fff;
+  border: none;
+  border-radius: var(--unibloc-radius);
+  padding: 0.6em 1.4em;
+  font-size: 1rem;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--unibloc-shadow);
+  transition: background 0.2s, color 0.2s;
+}
+button:hover, button:focus {
+  background: #ffb347;
+  color: var(--unibloc-dark);
+}
+
+input[type="text"], textarea, select {
+  border-radius: var(--unibloc-radius);
+  border: 1px solid var(--unibloc-border);
+  padding: 0.5rem;
+  font-size: 1rem;
+  background: #fff;
+  margin-top: 0.25rem;
+  box-shadow: none;
+}
+
+.form-group {
+  margin-bottom: 1.2rem;
+}
+
+.card {
+  background: #fff;
+  border-radius: var(--unibloc-radius);
+  box-shadow: var(--unibloc-shadow);
+  padding: 2rem;
+  margin-bottom: 2rem;
 }

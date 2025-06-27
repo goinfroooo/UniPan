@@ -107,23 +107,22 @@ async function createBloc() {
 </script>
 
 <template>
-  <div>
-    <HeaderAuth @show-profile="showProfile = true" />
-    <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 1rem;">
+  <div class="main-container">
+    <HeaderAuth @show-profile="showProfile = true" :tab="showBlocs ? 'blocs' : (showProfile ? 'profile' : 'create')" />
+    <div class="menu-bar">
       <button @click="showBlocs = false; showProfile = false">Créer son bloc</button>
       <button @click="showBlocs = true; showProfile = false">Blocs</button>
-      <button v-if="showProfile || showBlocs" @click="showProfile = false; showBlocs = false">Fermer la page</button>
     </div>
-    <div v-if="showProfile">
+    <div v-if="showProfile" class="card">
       <ProfileSettings />
-      <button @click="showProfile = false" style="margin: 2rem auto; display: block;">Retour</button>
+      <button @click="showProfile = false" class="btn-retour">Retour</button>
     </div>
-    <div v-else-if="showBlocs">
+    <div v-else-if="showBlocs" class="card">
       <BlocList />
     </div>
-    <div v-else style="display: flex; flex-direction: column; align-items: center; margin-top: 2rem;">
+    <div v-else class="card create-bloc">
       <h1>Créer un bloc d'escalade</h1>
-      <form @submit.prevent="createBloc" style="margin-bottom: 2rem; width: 350px;">
+      <form @submit.prevent="createBloc">
         <div class="form-group">
           <label>Nom du bloc *</label>
           <input v-model="blocName" type="text" required />
@@ -140,8 +139,8 @@ async function createBloc() {
         </div>
         <div class="form-group">
           <label>Prises sélectionnées *</label>
-          <div>
-            <span v-for="(type, num) in selected" :key="num" style="margin-right: 0.5rem;">
+          <div class="selected-holds">
+            <span v-for="(type, num) in selected" :key="num">
               {{ num }}<span v-if="type">{{ type }}</span>
               <span v-if="type" :style="{ color: holdColors[type], fontWeight: 'bold', marginLeft: '2px' }">({{ holdLabels[type] }})</span>
             </span>
@@ -152,23 +151,19 @@ async function createBloc() {
         <div v-if="createSuccess" class="success">{{ createSuccess }}</div>
         <button type="submit">Créer le bloc</button>
       </form>
-      <div style="display: grid; grid-template-columns: repeat(10, 40px); gap: 8px;">
+      <div class="holds-grid">
         <button
           v-for="num in total"
           :key="num"
+          class="hold-btn"
           :style="{
             background: holdColors[selected[num] || ''],
             color: selected[num] ? 'white' : 'black',
             border: '1px solid #ccc',
-            borderRadius: '50%',
-            width: '40px',
-            height: '40px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
           }"
           @click="toggleHold(num)"
         >
-          {{ num }}
+          <span class="hold-num">{{ num }}</span>
         </button>
       </div>
     </div>
@@ -176,28 +171,87 @@ async function createBloc() {
 </template>
 
 <style scoped>
-button:focus {
-  outline: 2px solid #42b983;
-}
-.form-group {
-  margin-bottom: 1rem;
+.main-container {
+  margin-top: 80px;
+  padding: 2rem 0;
+  min-height: 100vh;
+  background: var(--unibloc-grey);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
 }
-input[type="text"], textarea, select {
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+.menu-bar {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.card {
   width: 100%;
-  margin-top: 0.25rem;
+  max-width: 500px;
+  background: #fff;
+  border-radius: var(--unibloc-radius);
+  box-shadow: var(--unibloc-shadow);
+  padding: 2.5rem 2rem;
+  margin-bottom: 2rem;
+}
+.create-bloc h1 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: var(--unibloc-orange);
+  font-size: 2rem;
+  font-family: 'Montserrat', 'Inter', Arial, sans-serif;
+}
+.holds-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 40px);
+  gap: 8px;
+  justify-content: center;
+  margin-top: 2rem;
+}
+.selected-holds {
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+.btn-retour {
+  display: block;
+  margin: 2rem auto 0 auto;
+  background: #fff;
+  color: var(--unibloc-orange);
+  border: 2px solid var(--unibloc-orange);
+  font-weight: 600;
+}
+.btn-retour:hover, .btn-retour:focus {
+  background: var(--unibloc-orange);
+  color: #fff;
 }
 .error {
-  color: #c00;
+  color: #c0392b;
   margin-bottom: 1rem;
+  font-weight: bold;
 }
 .success {
   color: #2d8a34;
   margin-bottom: 1rem;
+  font-weight: bold;
+}
+.hold-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-weight: bold;
+  font-size: 1rem;
+  padding: 0;
+  margin: 0;
+}
+.hold-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 </style>
