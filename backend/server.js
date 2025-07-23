@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
@@ -365,7 +366,13 @@ app.post('/api/upload/avatar', authMiddleware, upload.single('avatar'), (req, re
 });
 
 // Connexion à MongoDB
-mongoose.connect('mongodb://localhost:27017/unipan', {
+const mongoUrl = process.env.MONGO_URL || '';
+if (!mongoUrl) {
+  console.error('Erreur : la variable d\'environnement MONGO_URL n\'est pas définie.');
+  process.exit(1);
+}
+
+mongoose.connect(mongoUrl, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
