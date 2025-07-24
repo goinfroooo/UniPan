@@ -184,7 +184,7 @@ async function createBloc() {
 
 <style scoped>
 .main-container {
-  margin-top: 80px;
+  /* margin-top: 80px; */
   padding: 2rem 0;
   min-height: 100vh;
   background: var(--unibloc-grey);
@@ -196,7 +196,8 @@ async function createBloc() {
   display: flex;
   justify-content: center;
   gap: 1.5rem;
-  margin-bottom: 2rem;
+  margin-top: 16px; /* Marge très compacte */
+  margin-bottom: 1rem;
 }
 .card {
   width: 100%;
