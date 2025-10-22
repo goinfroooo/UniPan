@@ -358,7 +358,7 @@ fetchUser()
 <style scoped>
 .bloc-manager {
   max-width: 400px;
-  margin: 2rem auto;
+  margin: 4.5rem auto 2rem auto; /* Ajout d'un margin-top pour laisser de l'espace sous le header */
   padding: 2rem;
   border: 1px solid #ccc;
   border-radius: 8px;

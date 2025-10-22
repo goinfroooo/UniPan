@@ -1,7 +1,8 @@
 <template>
   <header style="width: 100%; background: #222; color: #fff; padding: 1rem 0; display: flex; justify-content: space-between; align-items: center;">
     <div style="font-size: 1.5rem; font-weight: bold; margin-left: 2rem;">UniPan</div>
-    <div style="margin-right: 2rem; display: flex; align-items: center;">
+    <!-- Menu desktop -->
+    <div class="menu-desktop" style="margin-right: 2rem; display: flex; align-items: center;">
       <template v-if="user">
         <img v-if="user.avatar" :src="user.avatar" alt="avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 1rem;" />
         <span style="margin-right: 1rem; font-weight: bold;">{{ user.pseudo }}</span>
@@ -13,6 +14,27 @@
         <button @click="showRegister = true">Créer un compte</button>
       </template>
     </div>
+    <!-- Menu mobile -->
+    <div class="menu-mobile" style="margin-right: 2rem; display: none; align-items: center; position: relative;">
+      <button @click="showMobileMenu = !showMobileMenu" class="menu-btn" aria-label="Menu">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div v-if="showMobileMenu" class="dropdown-menu">
+        <template v-if="user">
+          <div class="dropdown-item" style="display:flex;align-items:center;gap:0.5em;">
+            <img v-if="user.avatar" :src="user.avatar" alt="avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" />
+            <span style="font-weight: bold;">{{ user.pseudo }}</span>
+          </div>
+          <button class="dropdown-item" @click="$emit('show-profile'); showMobileMenu=false">Profil</button>
+          <button class="dropdown-item" @click="logout; showMobileMenu=false">Se déconnecter</button>
+        </template>
+        <template v-else>
+          <button class="dropdown-item" @click="showLogin = true; showMobileMenu=false">Se connecter</button>
+          <button class="dropdown-item" @click="showRegister = true; showMobileMenu=false">Créer un compte</button>
+        </template>
+      </div>
+    </div>
+    <!-- Modals -->
     <div v-if="showLogin" class="modal-bg" @click.self="showLogin = false">
       <div class="modal">
         <h2>Connexion</h2>
@@ -67,6 +89,7 @@
 import { ref, onMounted } from 'vue'
 const showLogin = ref(false)
 const showRegister = ref(false)
+const showMobileMenu = ref(false)
 
 // État utilisateur connecté
 const user = ref(null)
@@ -224,5 +247,55 @@ input[type="email"], input[type="password"] {
 .error {
   color: #c00;
   margin-bottom: 1rem;
+}
+.menu-desktop {
+  display: flex;
+}
+.menu-mobile {
+  display: none;
+}
+@media (max-width: 700px) {
+  .menu-desktop {
+    display: none !important;
+  }
+  .menu-mobile {
+    display: flex !important;
+  }
+}
+.menu-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  padding: 0.5rem;
+  cursor: pointer;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+}
+.dropdown-menu {
+  position: absolute;
+  top: 48px;
+  right: 0;
+  background: #222;
+  border-radius: 8px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.2);
+  min-width: 180px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5em 0;
+}
+.dropdown-item {
+  background: none;
+  border: none;
+  color: #fff;
+  text-align: left;
+  padding: 0.75em 1.5em;
+  font-size: 1rem;
+  cursor: pointer;
+  width: 100%;
+}
+.dropdown-item:hover {
+  background: #333;
 }
 </style> 

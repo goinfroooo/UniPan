@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import { Capacitor } from '@capacitor/core'
 import HeaderAuth from './components/HeaderAuth.vue'
 import ProfileSettings from './components/ProfileSettings.vue'
 import BlocList from './components/BlocList.vue'
@@ -61,6 +62,17 @@ function toggleHold(num) {
   }
 }
 
+// Configuration de l'API selon l'environnement
+const getApiUrl = () => {
+  if (Capacitor.isNativePlatform()) {
+    // En mode mobile, utiliser l'IP locale ou un serveur distant
+    return 'http://10.0.2.2:3001/api' // Pour émulateur Android
+    // return 'https://your-server.com/api' // Pour production
+  } else {
+    return 'http://localhost:3001/api' // Pour développement web
+  }
+}
+
 async function createBloc() {
   createError.value = ''
   createSuccess.value = ''
@@ -81,7 +93,7 @@ async function createBloc() {
     return
   }
   try {
-    const res = await fetch('http://localhost:3001/api/blocs', {
+    const res = await fetch(`${getApiUrl()}/blocs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -172,7 +184,7 @@ async function createBloc() {
 
 <style scoped>
 .main-container {
-  margin-top: 80px;
+  /* margin-top: 80px; */
   padding: 2rem 0;
   min-height: 100vh;
   background: var(--unibloc-grey);
@@ -184,7 +196,8 @@ async function createBloc() {
   display: flex;
   justify-content: center;
   gap: 1.5rem;
-  margin-bottom: 2rem;
+  margin-top: 16px; /* Marge très compacte */
+  margin-bottom: 1rem;
 }
 .card {
   width: 100%;
@@ -253,5 +266,75 @@ async function createBloc() {
   justify-content: center;
   width: 100%;
   height: 100%;
+}
+
+/* Optimisations pour mobile */
+@media (max-width: 768px) {
+  .main-container {
+    margin-top: 60px;
+    padding: 1rem 0.5rem;
+  }
+  
+  .card {
+    max-width: 100%;
+    margin: 0 0.5rem 1rem 0.5rem;
+    padding: 1.5rem 1rem;
+  }
+  
+  .holds-grid {
+    grid-template-columns: repeat(10, 35px);
+    gap: 6px;
+  }
+  
+  .hold-btn {
+    width: 35px;
+    height: 35px;
+    font-size: 0.9rem;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .menu-bar {
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .menu-bar button {
+    padding: 0.8rem 1.2rem;
+    font-size: 0.9rem;
+  }
+  
+  .create-bloc h1 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  input, textarea, select {
+    font-size: 16px; /* Évite le zoom automatique sur iOS */
+    padding: 0.8rem;
+  }
+}
+
+/* Support pour les très petits écrans */
+@media (max-width: 480px) {
+  .holds-grid {
+    grid-template-columns: repeat(10, 30px);
+    gap: 4px;
+  }
+  
+  .hold-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 0.8rem;
+  }
+  
+  .card {
+    margin: 0 0.25rem 1rem 0.25rem;
+    padding: 1rem 0.75rem;
+  }
 }
 </style>
